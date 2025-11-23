@@ -89,7 +89,6 @@ Output: Failure mode + confidence
 \n+## 📌 Final Result (Summary)
 ![Final Confusion Matrix](images/final_results.png)
 **Exact failure classification:** 307 / 339 (90.56%)  
-**Missed failures:** 0  
 **Per-mode recall:** TWF 100% · PWF 100% · HDF 91% · OSF 90%  
 **Approach:** 4 independent shallow Decision Trees + max-probability fusion.
 
