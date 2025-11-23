@@ -1,42 +1,30 @@
-# 🔧 Predictive Maintenance Failure Classification from Industrial Sensor Data
+# 🔧 Predictive Maintenance Failure Classification
 
-**Prepared by:** Mahdi Chaaben
+**Author:** Mahdi Chaaben
 
-## 📋 Project Overview
+## 🎯 Problem & Solution
 
-This project implements an intelligent predictive maintenance system for industrial milling machines using the AI4I 2020 Predictive Maintenance Dataset. Instead of traditional multi-class classification approaches, we developed **specialized binary Decision Tree classifiers** for each failure mode, achieving **90.56% accuracy** in correctly identifying specific failure types.
+Industrial milling machines have **5 different failure modes** with distinct physical causes. With only **3% failures** in 10,000 cycles, traditional ML models fail catastrophically by predicting "No Failure" for everything.
 
-## 🎯 The Problem
+**Our Solution:** Physics-driven approach using **4 specialized binary Decision Tree classifiers** → **90.56% accuracy** with **ZERO catastrophic misses**.
 
-Industrial machines fail in different ways, and each failure type has distinct physical causes:
-- Dataset contains **10,000 machine operation cycles**
-- Only **~3% result in actual failures** (severe class imbalance)
-- **5 independent failure modes** with completely different root causes
-- Traditional single-model approaches predict "No Failure" for everything → **unacceptable for safety-critical systems**
+![Machine Failure Distribution](images/failure_ditribution.png)
+![Combined Results](images/final_results.png)
 
-## 📊 Dataset Description
+## 📊 Dataset: AI4I 2020 Predictive Maintenance
 
-**AI4I 2020 Predictive Maintenance Dataset** - A synthetic simulation of a real-world CNC milling machine with 10,000 rows and 14 columns.
+10,000 machine cycles simulating a real CNC milling machine with 5 sensors:
+- **Air/Process Temperature [K]**, **Rotational Speed [rpm]**, **Torque [Nm]**, **Tool Wear [min]**
 
-### Key Features
-| Feature | Description |
-|---------|-------------|
-| **Type** | Quality variant (L/M/H - Low/Medium/High) |
-| **Air temperature [K]** | ~300 K ±2 K |
-| **Process temperature [K]** | Air temp + 10 K ±1 K |
-| **Rotational speed [rpm]** | ~2860 W power calculation + noise |
-| **Torque [Nm]** | Normal distribution around 40 Nm, σ=10 |
-| **Tool wear [min]** | Cumulative wear over time |
+### 5 Failure Modes (339 total failures)
 
-### The 5 Failure Modes
-
-| Mode | Name | Trigger Condition | Count |
-|------|------|-------------------|-------|
-| **TWF** | Tool Wear Failure | Tool wear hits 200–240 min | 120 |
-| **HDF** | Heat Dissipation Failure | (Process − Air < 8.6 K) AND (Speed < 1380 rpm) | 115 |
-| **PWF** | Power Failure | Power = Torque × ω not in [3500, 9000] W | 95 |
-| **OSF** | Overstrain Failure | Tool wear × Torque > threshold (11k/12k/13k for L/M/H) | 98 |
-| **RNF** | Random Failure | 0.1% chance per row (unpredictable) | 5 |
+| Mode | Name | Physics-Based Trigger | Count |
+|------|------|----------------------|-------|
+| **TWF** | Tool Wear Failure | Tool wear > 200 min | 120 |
+| **HDF** | Heat Dissipation Failure | High torque + Low speed + High temp | 115 |
+| **PWF** | Power Failure | Power outside [3500, 9000] W | 95 |
+| **OSF** | Overstrain Failure | High torque × Worn tool | 98 |
+| **RNF** | Random Failure | Unpredictable (0.1% chance) | 5 |
 
 ## 🔬 Our Solution: Physics-Driven Expert System
 
@@ -60,9 +48,15 @@ Traditional multi-class models struggle with:
 
 ### Key Correlations Discovered
 
-![Strong Sensor Correlations](images/correlation_heatmap.png)
+#### Strong Sensor Correlations
+![Strong Sensor Correlations](images/sensorcorolattion.png)
+*Figure 2: Strong correlations between sensor readings (|ρ| ≥ 0.6)*
 
-**Sensor-to-Failure Correlations (Point-Biserial):**
+#### Sensor-to-Failure Correlations (Point-Biserial)
+![Sensor-Failure Correlations](images/corolation_sensor_failuretypes.png)
+*Figure 3: Point-biserial correlations reveal which sensors drive each failure mode*
+
+**Key Findings:**
 - **TWF:** Tool wear (+0.12) - primary driver
 - **HDF:** Torque (+0.14), Air Temp (+0.14), Speed (−0.12)
 - **PWF:** Speed (+0.12), Torque (+0.08)
@@ -115,164 +109,52 @@ def predict_failure_mode_json(X):
     return {
         "probabilities": probs,
         "prediction": final_prediction,
-        "confidence": max(probs.values())
-    }
-```
+        # 🔧 Predictive Maintenance – Brief
 
-## 📈 Results
+        Rare machine failures (~3% of 10,000 cycles) are detected by four tiny, physics-aligned **binary Decision Trees** (TWF, HDF, PWF, OSF). Random failures (RNF) are truly unpredictable and excluded.
 
-### Individual Model Performance
+        ## ✅ Core Result
+        **Exact failure type detected:** 307 / 339 (90.56%) real breakdowns  
+        **Missed failures:** 0 (none predicted as safe)  
+        **Per-mode recall:** TWF 100% · PWF 100% · HDF 91% · OSF 90%
 
-| Model | Precision | Recall | F1-Score | Key Achievement |
-|-------|-----------|--------|----------|-----------------|
-| **TWF** | 0.06 | **1.00** | 0.11 | Zero missed failures |
-| **HDF** | 0.43 | **0.91** | 0.58 | Caught 31/34 thermal failures |
-| **PWF** | 0.49 | **1.00** | 0.66 | Perfect power failure detection |
-| **OSF** | 0.21 | **0.90** | 0.34 | Only 3 missed overstrain events |
+        ![System Performance](images/final_results.png)
 
-### Combined System Performance
+        ## 🔍 How It Works
+        - One shallow tree per failure mode (max_depth=3, class_weight='balanced')
+        - Input sensors only if physically causal (e.g. TWF uses wear only)
+        - Fusion picks failure with highest probability; fallback = No_Failure
+        - "No_Failure" probability = 1 − max(failure probabilities)
 
-**Test on ALL 339 Real Failures:**
+        ## 🧪 Features Used
+        | Mode | Sensors |
+        |------|---------|
+        | TWF | Tool wear |
+        | HDF | Torque, Speed, Air Temp, Process Temp |
+        | PWF | Speed, Torque (power) |
+        | OSF | Torque, Tool wear, Speed |
 
-```
-Overall Accuracy: 90.56%
-Correctly identified: 307/339 failures with exact failure type
-Misclassifications: 32 (wrong type, but still flagged as failure)
-Catastrophic misses: 0 (ZERO real failures predicted as "No_Failure")
-```
+        ## 🚀 Quick Use
+        ```bash
+        pip install pandas numpy scikit-learn
+        ```
+        ```python
+        # df = pd.read_csv('ai4i2020.csv')
+        # models = train_models(df)  # (see notebook)
+        # result = predict_failure_mode_json(df.iloc[[0]])
+        ```
 
-**Confusion Matrix:**
+        ## 🏁 Why It Matters
+        - Zero catastrophic misses
+        - Interpretable (engineer-friendly)
+        - Physics-driven, not overfit black box
 
-![Confusion Matrix](images/confusion_matrix.png)
+        ## 🔧 Next (Optional)
+        - Reduce false positives
+        - Add time-series early warnings
+        - Deploy real-time API
 
-### Why This Matters
+        **Author:** Mahdi Chaaben
 
-✅ **Perfect Safety:** No real breakdown ever gets classified as "No Failure"  
-✅ **Interpretable:** Each tree has ≤3 levels, fully explainable to engineers  
-✅ **Actionable:** Knowing the exact failure type enables targeted maintenance  
-✅ **Physics-Aligned:** Models match known mechanical/thermal failure mechanisms  
-
-## 🚀 Installation & Usage
-
-### Requirements
-
-```bash
-pip install pandas numpy scikit-learn matplotlib seaborn scipy
-```
-
-### Quick Start
-
-```python
-import pandas as pd
-
-# Load dataset
-df = pd.read_csv('ai4i2020.csv')
-
-# Train models (see notebook for full implementation)
-from predictive_maintenance import train_models, predict_failure_mode_json
-
-models = train_models(df)
-
-# Predict on new data
-sample = df[['Air temperature [K]', 'Process temperature [K]',
-             'Rotational speed [rpm]', 'Torque [Nm]', 
-             'Tool wear [min]']].iloc[[0]]
-
-prediction = predict_failure_mode_json(sample)
-print(prediction)
-# Output: {
-#   "TWF": 0.02, "HDF": 0.15, "PWF": 0.03, "OSF": 0.05,
-#   "No_Failure": 0.85,
-#   "final_prediction": "No_Failure",
-#   "confidence": 0.85
-# }
-```
-
-## 📁 Project Structure
-
-```
-.
-├── dataset.csv                                    # AI4I 2020 dataset
-├── Predictive Maintenance Classification.ipynb    # Main analysis notebook
-├── images/                                        # Visualizations
-│   ├── correlation_heatmap.png
-│   ├── confusion_matrix.png
-│   └── failure_distribution.png
-└── README.md                                      # This file
-```
-
-## 🔍 Key Insights
-
-### 1. **Failure Mode Independence**
-Correlation heatmap shows all failure modes are independent (correlations ≈ 0), confirming each has distinct root causes.
-
-### 2. **Root Cause Analysis**
-
-| Failure | Mechanism | Critical Threshold |
-|---------|-----------|-------------------|
-| **TWF** | Cumulative wear degradation | Tool wear > 200 min |
-| **HDF** | Thermal runaway | Torque > 50 Nm + Speed < 1300 rpm + Temp > 303 K |
-| **PWF** | Power envelope violation | Speed > 2400 & Torque < 20, OR Speed < 1400 & Torque > 60 |
-| **OSF** | Mechanical stress overload | High torque × worn tool |
-
-### 3. **Why Our Approach Wins**
-
-❌ **Single Multi-Class Model:**
-- Learns to predict "No Failure" for 97% accuracy
-- Ignores rare but critical failure events
-- Black-box decision making
-
-✅ **Our Expert System:**
-- Each model focuses on one physical failure mechanism
-- Balanced training ensures rare events are learned
-- Transparent, interpretable decisions
-- **90.56% exact failure type identification**
-- **Zero catastrophic misses**
-
-## 🎓 Methodology
-
-1. **Exploratory Data Analysis** - Correlation analysis, failure distribution, sensor behavior
-2. **Root Cause Identification** - Physics-based feature selection per failure mode
-3. **Individual Model Training** - Specialized Decision Trees with balanced class weights
-4. **Probability Fusion** - Smart combination strategy for final prediction
-5. **Rigorous Validation** - Tested on ALL 339 real failures from dataset
-
-## 📊 Visualizations
-
-The notebook includes:
-- Sensor correlation heatmaps
-- Failure mode co-occurrence analysis
-- Scatterplot analysis for each failure type
-- Decision tree visualizations
-- Confusion matrices for each model
-- Final system performance metrics
-
-## 🏆 Achievements
-
-- ✅ **90.56%** accuracy on real failure classification
-- ✅ **100%** recall on critical failure modes (PWF, TWF)
-- ✅ **Zero** catastrophic misses (no real failure classified as safe)
-- ✅ Fully interpretable models (max 3-level decision trees)
-- ✅ Physics-aligned predictions matching known failure mechanisms
-
-## 📝 Future Improvements
-
-- [ ] Implement ensemble methods for the combination layer
-- [ ] Add time-series analysis for early failure prediction
-- [ ] Deploy as real-time monitoring API
-- [ ] Include RNF prediction using anomaly detection techniques
-- [ ] Optimize false positive rates while maintaining 100% recall
-
-## 📚 References
-
-- AI4I 2020 Predictive Maintenance Dataset
-- Scikit-learn Decision Tree Documentation
-- Industrial Predictive Maintenance Best Practices
-
-## 👤 Author
-
-**Mahdi Chaaben**
-
----
-
-**Built with 💡 by understanding physics first, then applying machine learning.**
+        Images: see `images/` for individual mode analyses.
+![PWF Confusion Matrix](images/twf.png)
