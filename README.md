@@ -8,8 +8,6 @@ Industrial milling machines have **5 different failure modes** with distinct phy
 
 **Our Solution:** Physics-driven approach using **4 specialized binary Decision Tree classifiers** → **90.56% accuracy** with **ZERO catastrophic misses**.
 
-![Machine Failure Distribution](images/failure_ditribution.png)
-![Combined Results](images/final_results.png)
 
 ## 📊 Dataset: AI4I 2020 Predictive Maintenance
 
@@ -122,41 +120,3 @@ def predict_failure_mode_json(X):
 
         ![System Performance](images/final_results.png)
 
-        ## 🔍 How It Works
-        - One shallow tree per failure mode (max_depth=3, class_weight='balanced')
-        - Input sensors only if physically causal (e.g. TWF uses wear only)
-        - Fusion picks failure with highest probability; fallback = No_Failure
-        - "No_Failure" probability = 1 − max(failure probabilities)
-
-        ## 🧪 Features Used
-        | Mode | Sensors |
-        |------|---------|
-        | TWF | Tool wear |
-        | HDF | Torque, Speed, Air Temp, Process Temp |
-        | PWF | Speed, Torque (power) |
-        | OSF | Torque, Tool wear, Speed |
-
-        ## 🚀 Quick Use
-        ```bash
-        pip install pandas numpy scikit-learn
-        ```
-        ```python
-        # df = pd.read_csv('ai4i2020.csv')
-        # models = train_models(df)  # (see notebook)
-        # result = predict_failure_mode_json(df.iloc[[0]])
-        ```
-
-        ## 🏁 Why It Matters
-        - Zero catastrophic misses
-        - Interpretable (engineer-friendly)
-        - Physics-driven, not overfit black box
-
-        ## 🔧 Next (Optional)
-        - Reduce false positives
-        - Add time-series early warnings
-        - Deploy real-time API
-
-        **Author:** Mahdi Chaaben
-
-        Images: see `images/` for individual mode analyses.
-![PWF Confusion Matrix](images/twf.png)
