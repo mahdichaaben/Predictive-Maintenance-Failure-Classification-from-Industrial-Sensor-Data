@@ -8,8 +8,6 @@ Industrial milling machines have **5 different failure modes** with distinct phy
 
 **Our Solution:** Physics-driven approach using **4 specialized binary Decision Tree classifiers** → **90.56% accuracy** with **ZERO catastrophic misses**.
 
-![Machine Failure Distribution](images/failure_ditribution.png)
-![Combined Results](images/final_results.png)
 
 ## 📊 Dataset: AI4I 2020 Predictive Maintenance
 
@@ -87,74 +85,7 @@ Winner = argmax(all probabilities)
 Output: Failure mode + confidence
 ```
 
-### Prediction Logic
 
-```python
-def predict_failure_mode_json(X):
-    # 1. Get probabilities from each expert
-    probs = {
-        "TWF": model_TWF.predict_proba(X)[:, 1],
-        "HDF": model_HDF.predict_proba(X)[:, 1],
-        "PWF": model_PWF.predict_proba(X)[:, 1],
-        "OSF": model_OSF.predict_proba(X)[:, 1]
-    }
-    
-    # 2. Compute No_Failure probability
-    max_fail_prob = max(probs.values())
-    probs["No_Failure"] = 1 - max_fail_prob
-    
-    # 3. Select highest confidence prediction
-    final_prediction = argmax(probs)
-    
-    return {
-        "probabilities": probs,
-        "prediction": final_prediction,
-        # 🔧 Predictive Maintenance – Brief
 
-        Rare machine failures (~3% of 10,000 cycles) are detected by four tiny, physics-aligned **binary Decision Trees** (TWF, HDF, PWF, OSF). Random failures (RNF) are truly unpredictable and excluded.
+![Combined Results](images/final_results.png)
 
-        ## ✅ Core Result
-        **Exact failure type detected:** 307 / 339 (90.56%) real breakdowns  
-        **Missed failures:** 0 (none predicted as safe)  
-        **Per-mode recall:** TWF 100% · PWF 100% · HDF 91% · OSF 90%
-
-        ![System Performance](images/final_results.png)
-
-        ## 🔍 How It Works
-        - One shallow tree per failure mode (max_depth=3, class_weight='balanced')
-        - Input sensors only if physically causal (e.g. TWF uses wear only)
-        - Fusion picks failure with highest probability; fallback = No_Failure
-        - "No_Failure" probability = 1 − max(failure probabilities)
-
-        ## 🧪 Features Used
-        | Mode | Sensors |
-        |------|---------|
-        | TWF | Tool wear |
-        | HDF | Torque, Speed, Air Temp, Process Temp |
-        | PWF | Speed, Torque (power) |
-        | OSF | Torque, Tool wear, Speed |
-
-        ## 🚀 Quick Use
-        ```bash
-        pip install pandas numpy scikit-learn
-        ```
-        ```python
-        # df = pd.read_csv('ai4i2020.csv')
-        # models = train_models(df)  # (see notebook)
-        # result = predict_failure_mode_json(df.iloc[[0]])
-        ```
-
-        ## 🏁 Why It Matters
-        - Zero catastrophic misses
-        - Interpretable (engineer-friendly)
-        - Physics-driven, not overfit black box
-
-        ## 🔧 Next (Optional)
-        - Reduce false positives
-        - Add time-series early warnings
-        - Deploy real-time API
-
-        **Author:** Mahdi Chaaben
-
-        Images: see `images/` for individual mode analyses.
-![PWF Confusion Matrix](images/twf.png)
