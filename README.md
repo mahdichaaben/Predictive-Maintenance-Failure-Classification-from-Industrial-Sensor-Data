@@ -111,6 +111,8 @@ def predict_failure_mode_json(X):
         "prediction": final_prediction,
         # 🔧 Predictive Maintenance – Brief
 
+        Approach: four separate shallow **scikit-learn Decision Tree** classifiers (one per failure mode) + simple max-probability fusion.
+
         Rare machine failures (~3% of 10,000 cycles) are detected by four tiny, physics-aligned **binary Decision Trees** (TWF, HDF, PWF, OSF). Random failures (RNF) are truly unpredictable and excluded.
 
         ## ✅ Core Result
